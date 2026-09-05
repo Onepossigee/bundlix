@@ -30,13 +30,21 @@ class BundliX_Auth {
         // Register Rewrite Rules
         add_action('init', array($this, 'add_rewrite_rules'));
         
-        // Flush rewrite rules on plugin activation (handled externally)
+        // Register Query Vars
+        add_filter('query_vars', array($this, 'add_query_vars'));
         
         // Intercept Template Loading
         add_filter('template_include', array($this, 'load_auth_templates'));
         
         // Handle Redirections
         add_action('template_redirect', array($this, 'handle_auth_redirects'));
+        
+        // Register AJAX actions for Login/Logout
+        add_action('wp_ajax_bundlix_login', array($this, 'handle_login'));
+        add_action('wp_ajax_nopriv_bundlix_login', array($this, 'handle_login'));
+        
+        add_action('wp_ajax_bundlix_logout', array($this, 'handle_logout'));
+        add_action('wp_ajax_nopriv_bundlix_logout', array($this, 'handle_logout'));
     }
 
     /**
@@ -171,6 +179,79 @@ class BundliX_Auth {
         // Redirect to login page with a logged-out message
         wp_redirect(home_url('/app/login?loggedout=true'));
         exit;
+    }
+
+    /**
+     * Handle Login Request (AJAX)
+     */
+    public function handle_login() {
+        // Verify Nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'bundlix_auth_nonce')) {
+            wp_send_json_error(array('message' => 'Security check failed.'));
+        }
+
+        $username = sanitize_text_field($_POST['username']); // Can be email or phone
+        $password = $_POST['password'];
+        $remember = isset($_POST['remember']) ? true : false;
+
+        // Rate Limiting Check (Simple IP based for MVP)
+        $ip = $_SERVER['REMOTE_ADDR'];
+        $transient_key = 'bundlix_login_fail_' . md5($ip);
+        $fails = get_transient($transient_key);
+
+        if ($fails && $fails >= 5) {
+            $retry_after = get_transient($transient_key . '_time');
+            wp_send_json_error(array(
+                'message' => 'Too many failed attempts. Please try again in ' . max(1, ($retry_after - time())) . ' seconds.'
+            ));
+        }
+
+        // Prepare credentials for wp_signon
+        $creds = array(
+            'user_login'    => $username,
+            'user_password' => $password,
+            'remember'      => $remember
+        );
+
+        // Attempt Login
+        $user = wp_signon($creds, false);
+
+        if (is_wp_error($user)) {
+            // Increment fail count
+            $new_fails = $fails ? $fails + 1 : 1;
+            set_transient($transient_key, $new_fails, 300); // 5 mins lock
+            set_transient($transient_key . '_time', time() + 300, 300);
+
+            // Generic error message for security
+            wp_send_json_error(array('message' => 'Invalid credentials provided.'));
+        } else {
+            // Success: Clear fail count
+            delete_transient($transient_key);
+            delete_transient($transient_key . '_time');
+
+            // Get User Role to determine redirect (optional future logic)
+            $role = isset($user->roles[0]) ? $user->roles[0] : 'subscriber';
+
+            wp_send_json_success(array(
+                'message' => 'Login successful. Redirecting...',
+                'redirect_url' => home_url('/app/dashboard'),
+                'user_role' => $role
+            ));
+        }
+    }
+
+    /**
+     * Handle Logout (AJAX)
+     */
+    public function handle_logout() {
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'bundlix_auth_nonce')) {
+            wp_send_json_error(array('message' => 'Security check failed.'));
+        }
+
+        wp_logout();
+        wp_send_json_success(array(
+            'redirect_url' => home_url('/app/login')
+        ));
     }
     
     /**

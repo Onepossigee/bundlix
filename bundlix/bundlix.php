@@ -28,6 +28,7 @@ require_once BUNDLIX_PLUGIN_DIR . 'includes/class-bundlix-mask.php';
 require_once BUNDLIX_PLUGIN_DIR . 'includes/class-bundlix-router.php';
 require_once BUNDLIX_PLUGIN_DIR . 'includes/class-bundlix-assets.php';
 require_once BUNDLIX_PLUGIN_DIR . 'includes/class-bundlix-security.php';
+require_once BUNDLIX_PLUGIN_DIR . 'includes/class-bundlix-auth.php';
 
 /**
  * Initialize BundliX Core
@@ -44,6 +45,9 @@ function bundlix_init() {
     
     // Initialize security hardening
     BundliX_Security::init();
+    
+    // Initialize authentication (query vars are registered in the class constructor)
+    new BundliX_Auth();
 }
 add_action('plugins_loaded', 'bundlix_init');
 
