@@ -91,10 +91,19 @@ class BundliX_Assets {
             true
         );
         
+        // Register auth JS for login/register handling
+        wp_register_script(
+            'bundlix-auth',
+            BUNDLIX_PLUGIN_URL . 'assets/js/bundlix-auth.js',
+            array('bundlix-core'),
+            self::get_asset_version(),
+            true
+        );
+        
         // Localize script with app data
-        wp_localize_script('bundlix-core', 'bundlixConfig', array(
+        wp_localize_script('bundlix-core', 'bundlixApp', array(
             'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('bundlix_nonce'),
+            'nonce' => wp_create_nonce('bundlix_auth_nonce'),
             'siteUrl' => home_url(),
             'appUrl' => home_url('/app'),
             'restUrl' => rest_url('bundlix/v1'),
@@ -116,6 +125,7 @@ class BundliX_Assets {
         // Enqueue scripts
         wp_enqueue_script('bundlix-core');
         wp_enqueue_script('bundlix-router');
+        wp_enqueue_script('bundlix-auth'); // Always load auth for login pages
         wp_enqueue_script('bundlix-dashboard');
     }
     

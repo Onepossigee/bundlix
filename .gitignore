@@ -1,26 +1,17 @@
 ```
-# Compiled and build artifacts
-*.pyc
-__pycache__/
-*.o
-*.obj
-dist/
-build/
-target/
-
 # Dependencies
 node_modules/
-vendor/
-*.egg-info/
-.pytest_cache/
-.mypy_cache/
-.coverage
+
+# Build artifacts
+dist/
+build/
+*.min.js
+*.min.css
+*.bundle.js
 
 # Logs and temp files
 *.log
 *.tmp
-*.swp
-*.swo
 
 # Environment
 .env
@@ -30,14 +21,8 @@ vendor/
 # Editors
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# OS specific
+# OS generated files
 .DS_Store
 Thumbs.db
-
-# Coverage
-coverage/
-htmlcov/
 ```
